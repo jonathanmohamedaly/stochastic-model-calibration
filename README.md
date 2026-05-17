@@ -219,7 +219,7 @@ stochastic-model-calibration/
 ├── requirements.txt
 └── pyproject.toml
 
-
+```
 ----------------------------------------------
 
 # Calibration de Modèles Stochastiques pour le Pricing de Produits Dérivés
