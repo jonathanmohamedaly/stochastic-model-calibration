@@ -4,6 +4,8 @@ from src.models.sabr import SABRModel
 from src.pricing.sabr_formula import hagan_implied_volatility
 from src.models.heston import HestonModel
 from src.pricing.heston_pricer import heston_implied_volatility
+from src.models.hull_white import HullWhiteModel
+from src.pricing.swaption_pricer import payer_swaption_price
 
 def sabr_smile_mse_loss(
         parameters : np.ndarray,
@@ -88,4 +90,51 @@ def heston_surface_mse_loss(
         return float(np.mean(error**2))
     
     except:
+        return 1e10
+
+def hull_white_swaption_surface_mse_loss(
+    parameters: np.ndarray,
+    option_maturities: np.ndarray,
+    swap_maturities: np.ndarray,
+    market_prices: np.ndarray,
+    strike: float,
+    rate: float,
+    payment_frequency: int = 1,
+) -> float:
+    """
+    MSE loss between market swaption prices and Hull-White model prices.
+
+    parameters = [mean_reversion, volatility]
+    """
+
+    mean_reversion, volatility = parameters
+
+    try:
+        model = HullWhiteModel(
+            mean_reversion=float(mean_reversion),
+            volatility=float(volatility),
+        )
+
+        model_prices = np.zeros_like(market_prices, dtype=float)
+
+        for i, option_maturity in enumerate(option_maturities):
+            for j, swap_maturity in enumerate(swap_maturities):
+                if np.isnan(market_prices[i, j]):
+                    model_prices[i, j] = np.nan
+                    continue
+
+                model_prices[i, j] = payer_swaption_price(
+                    strike=strike,
+                    option_maturity=float(option_maturity),
+                    swap_maturity=float(swap_maturity),
+                    rate=rate,
+                    model=model,
+                    payment_frequency=payment_frequency,
+                )
+
+        errors = model_prices - market_prices
+
+        return float(np.nanmean(errors**2))
+
+    except Exception:
         return 1e10
